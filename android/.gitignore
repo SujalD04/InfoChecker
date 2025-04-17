@@ -1,0 +1,49 @@
+gradle-wrapper.jar
+/.gradle
+/captures/
+/gradlew
+/gradlew.bat
+/local.properties
+GeneratedPluginRegistrant.java
+.cxx/
+
+# Remember to never publicly share your keystore.
+# See https://flutter.dev/to/reference-keystore
+key.properties
+**/*.keystore
+**/*.jks
+
+# Dart/Pub related
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+
+# Build output
+build/
+
+# iOS/Android specific
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework/
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Runner.xcworkspace/
+
+# Firebase configuration files
+android/app/google-services.json
+GoogleService-Info.plist
+
+# IDE configuration
+.idea/
+.vscode/
+
+# Sensitive environment variables (if any)
+.env
+
+# Mac specific files
+.DS_Store
+
+# Windows specific files
+Thumbs.db
