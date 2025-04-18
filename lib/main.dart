@@ -6,12 +6,20 @@ import 'package:http/http.dart' as http;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await dotenv.load();
   runApp(const MyApp());
+}
+
+void _launchURL(String url) async {
+  final uri = Uri.tryParse(url);
+  if (uri != null && await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -171,7 +179,7 @@ class ClaimInputScreen extends StatefulWidget {
 
 class _ClaimInputScreenState extends State<ClaimInputScreen> {
   final claimController = TextEditingController();
-  String responseText = "";
+  List<dynamic> responseData = [];
   bool isLoading = false;
 
   Future<void> sendClaim() async {
@@ -179,60 +187,49 @@ class _ClaimInputScreenState extends State<ClaimInputScreen> {
 
     setState(() {
       isLoading = true;
-      responseText = "";
+      responseData = [];
     });
 
     try {
       final response = await http.post(
         Uri.parse(dotenv.env['API_URL']!),
         headers: {'Content-Type': 'application/json'},
-        body: '{"claim": "${claimController.text}"}',
+        body: jsonEncode({'claim': claimController.text}),
       );
 
+      print("Response Status: ${response.statusCode}");
+      print("Response Body: ${response.body}");
+
       if (response.statusCode == 200) {
-        final dynamic responseData = jsonDecode(response.body);
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        print("Parsed Response Data: $data");
 
         setState(() {
-          responseText = _formatResponse(responseData);
+          if (data.containsKey('resultLinks') && data['resultLinks'] is List) {
+            responseData = data['resultLinks'];
+          } else {
+            responseData = [
+              {'error': 'Invalid or missing resultLinks'},
+            ];
+          }
         });
       } else {
         setState(() {
-          responseText = "Error: ${response.statusCode}";
+          responseData = [
+            {'error': 'Error: ${response.statusCode}'},
+          ];
         });
       }
     } catch (e) {
       setState(() {
-        responseText = "Failed to check claim: $e";
+        responseData = [
+          {'error': 'Failed to check claim: $e'},
+        ];
       });
     } finally {
       setState(() {
         isLoading = false;
       });
-    }
-  }
-
-  String _formatResponse(dynamic responseData) {
-    // Check if the response is a List
-    if (responseData is List) {
-      // Iterate over the list and format each item
-      return responseData
-          .map((item) {
-            return """
-Title: ${item['title']}
-Snippet: ${item['snippet']}
-URL: ${item['url']}
-        """;
-          })
-          .join("\n\n"); // Join the list items with new lines
-    } else if (responseData is Map) {
-      // If the response is a map, handle it here (if needed)
-      return """
-Title: ${responseData['title']}
-Snippet: ${responseData['snippet']}
-URL: ${responseData['url']}
-      """;
-    } else {
-      return "No relevant data found.";
     }
   }
 
@@ -281,12 +278,12 @@ URL: ${responseData['url']}
             SizedBox(height: 24),
             if (isLoading)
               Center(child: CircularProgressIndicator())
-            else if (responseText.isNotEmpty)
+            else if (responseData.isNotEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Analysis Result:",
+                    "Analysis Results:",
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -294,22 +291,82 @@ URL: ${responseData['url']}
                     ),
                   ),
                   SizedBox(height: 8),
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Text(
-                      responseText,
-                      style: TextStyle(fontSize: 16),
-                      textAlign: TextAlign.left,
-                    ),
-                  ),
+                  ...responseData.map<Widget>((item) {
+                    if (item['error'] != null) {
+                      return _buildErrorCard(item['error']);
+                    }
+                    return _buildResultCard(item);
+                  }).toList(),
                 ],
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResultCard(dynamic result) {
+    final title = result['title'];
+    final snippet = result['snippet'];
+    final url = result['url'];
+
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      elevation: 5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title ?? 'No title available',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              snippet ?? 'No snippet available.',
+              style: TextStyle(fontSize: 14, color: Colors.black54),
+            ),
+            SizedBox(height: 8),
+            if (url != null) ...[
+              GestureDetector(
+                onTap: () => _launchURL(url),
+                child: Text(
+                  'Source: $url',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.blueAccent,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorCard(String error) {
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      elevation: 5,
+      color: Colors.red[100],
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Text(
+          error,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.red,
+          ),
         ),
       ),
     );
