@@ -47,3 +47,7 @@ GoogleService-Info.plist
 
 # Windows specific files
 Thumbs.db
+
+#library
+lib/firebase_options.dart
+
