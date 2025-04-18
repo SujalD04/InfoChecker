@@ -11,7 +11,6 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-.env
 
 # IntelliJ related
 *.iml
@@ -48,3 +47,5 @@ android/app/google-services.json
 
 #Library
 /lib/firebase_options.dart 
+
+.env
