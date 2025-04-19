@@ -179,14 +179,31 @@ class ClaimInputScreen extends StatefulWidget {
 
 class _ClaimInputScreenState extends State<ClaimInputScreen> {
   final claimController = TextEditingController();
-  List<dynamic> responseData = [];
+  String claim = "";
+  String verdict = "";
+  String explanation = "";
+  List<String> sources = [];
+  List<dynamic> resultLinks = [];
+  List<dynamic> responseData = []; // Define responseData as an empty list
   bool isLoading = false;
+  String errorMessage = '';
 
   Future<void> sendClaim() async {
-    if (claimController.text.trim().isEmpty) return;
+    final input = claimController.text.trim();
+    if (input.isEmpty) {
+      setState(() {
+        errorMessage = 'Please enter a claim before checking.';
+      });
+      return;
+    }
 
     setState(() {
       isLoading = true;
+      errorMessage = '';
+      verdict = '';
+      explanation = '';
+      sources = [];
+      resultLinks = [];
       responseData = [];
     });
 
@@ -194,7 +211,7 @@ class _ClaimInputScreenState extends State<ClaimInputScreen> {
       final response = await http.post(
         Uri.parse(dotenv.env['API_URL']!),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'claim': claimController.text}),
+        body: jsonEncode({'claim': input}),
       );
 
       print("Response Status: ${response.statusCode}");
@@ -202,29 +219,41 @@ class _ClaimInputScreenState extends State<ClaimInputScreen> {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-        print("Parsed Response Data: $data");
+
+        // Extracting directly from JSON
+        final String result = data['result'] ?? "";
+
+        // Example result: "Verdict: true\nExplanation: The moon landing was not faked."
+        final int verdictStart = result.indexOf('Verdict:') + 'Verdict:'.length;
+        final int verdictEnd = result.indexOf('\n', verdictStart);
+        verdict =
+            result.substring(verdictStart, verdictEnd).trim().toUpperCase();
+
+        // Explanation
+        final int explanationStart =
+            result.indexOf('Explanation:') + 'Explanation:'.length;
+        final int explanationEnd = result.indexOf('Sources:', explanationStart);
+        explanation = result.substring(explanationStart, explanationEnd).trim();
+
+        // Handling sources - splitting them based on "Sources:" delimiter
+        final String sourcesText =
+            result.substring(explanationEnd + 'Sources:'.length).trim();
+        sources =
+            sourcesText.split('\n').map((source) => source.trim()).toList();
 
         setState(() {
-          if (data.containsKey('resultLinks') && data['resultLinks'] is List) {
-            responseData = data['resultLinks'];
-          } else {
-            responseData = [
-              {'error': 'Invalid or missing resultLinks'},
-            ];
-          }
+          claim = data['claim'] ?? '';
+          responseData = data['responseData'] ?? [];
+          resultLinks = data['resultLinks'] ?? [];
         });
       } else {
         setState(() {
-          responseData = [
-            {'error': 'Error: ${response.statusCode}'},
-          ];
+          errorMessage = 'Server error: ${response.statusCode}';
         });
       }
     } catch (e) {
       setState(() {
-        responseData = [
-          {'error': 'Failed to check claim: $e'},
-        ];
+        errorMessage = 'Something went wrong. Please try again.';
       });
     } finally {
       setState(() {
@@ -278,25 +307,83 @@ class _ClaimInputScreenState extends State<ClaimInputScreen> {
             SizedBox(height: 24),
             if (isLoading)
               Center(child: CircularProgressIndicator())
-            else if (responseData.isNotEmpty)
+            else
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "Analysis Results:",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                  if (errorMessage.isNotEmpty) _buildErrorCard(errorMessage),
+                  if (verdict.isNotEmpty ||
+                      explanation.isNotEmpty ||
+                      resultLinks.isNotEmpty)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Analysis Result:",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 12),
+                        Card(
+                          elevation: 5,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Verdict: $verdict",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        verdict.toLowerCase() == "true"
+                                            ? Colors.green
+                                            : verdict.toLowerCase() == "false"
+                                            ? Colors.red
+                                            : Colors.orange,
+                                  ),
+                                ),
+                                SizedBox(height: 12),
+                                Text(
+                                  "Explanation:",
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  explanation,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 20),
+                        Text(
+                          "Supporting Sources:",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 10),
+                        ...resultLinks
+                            .map((link) => _buildResultCard(link))
+                            .toList(),
+                      ],
                     ),
-                  ),
-                  SizedBox(height: 8),
-                  ...responseData.map<Widget>((item) {
-                    if (item['error'] != null) {
-                      return _buildErrorCard(item['error']);
-                    }
-                    return _buildResultCard(item);
-                  }).toList(),
                 ],
               ),
           ],
@@ -312,7 +399,7 @@ class _ClaimInputScreenState extends State<ClaimInputScreen> {
 
     return Card(
       margin: EdgeInsets.symmetric(vertical: 8),
-      elevation: 5,
+      elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -322,7 +409,7 @@ class _ClaimInputScreenState extends State<ClaimInputScreen> {
             Text(
               title ?? 'No title available',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
