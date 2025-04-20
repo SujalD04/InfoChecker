@@ -275,39 +275,6 @@ User Sign-In → Claim Submission → Backend Processing →
 Google CSE Search → Gemini API Analysis → Results Display
 ```
 
-## Testing Guidelines
-
-### Flutter App Testing
-
-1. **Unit Tests** - Test individual widgets and services:
-   ```bash
-   flutter test test/widget_test.dart
-   flutter test test/api_service_test.dart
-   ```
-
-2. **Integration Tests** - Test app flows:
-   ```bash
-   flutter test integration_test/app_test.dart
-   ```
-
-### Backend Testing
-
-1. **API Endpoint Tests**:
-   ```bash
-   cd backend
-   npm test
-   ```
-
-### Manual Testing Checklist
-
-- [ ] Sign in with Google account
-- [ ] Submit a claim known to be true
-- [ ] Submit a claim known to be false
-- [ ] Submit an ambiguous claim
-- [ ] Check source links for relevance
-- [ ] Test offline behavior
-- [ ] Test on multiple screen sizes
-
 ### Expected Results
 
 For claim "The Earth is round":
@@ -387,11 +354,6 @@ MIT License — use freely, contribute wisely.
 
 ## Contact
 
-- **GitHub**: [Misinformation Checker App Repository](https://github.com/your-username/misinformation-checker)
-- **Author**: Sujal — Flutter developer, full-stack builder, and tech explorer
-- **Email**: your-email@example.com
-- **Twitter**: [@yourusername](https://twitter.com/yourusername)
-
----
-
-> *"Programming isn't just about writing code. It's about building tools that make life easier and minds sharper."*
+- **GitHub**: [Misinformation Checker App Repository](https://github.com/SujalD04/InfoChecker)
+- **Author**: Sujal — Developer
+- **Email**: sujalrdixit@gmail.com
