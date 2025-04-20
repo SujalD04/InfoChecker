@@ -215,7 +215,7 @@ Now, you should see the application running on your connected device or emulator
 ### Google API Setup
 
 1. **Google Custom Search Engine Setup**:
-   - Go to [Google Programmable Search Engine](https://programmablesearches.google.com/create)
+   - Go to [Google Programmable Search Engine](https://programmablesearchengine.google.com/about/)
    - Create a new search engine
    - Note your Search Engine ID 
    - Configure which sites to search (or select "Search the entire web")
@@ -227,7 +227,7 @@ Now, you should see the application running on your connected device or emulator
    - Create credentials for an API key
 
 3. **Google Gemini API Setup**:
-   - Go to [Google AI Studio](https://makersuite.google.com/)
+   - Go to [Google AI Studio](https://aistudio.google.com/)
    - Sign up for Gemini API access
    - Generate an API key
    - Configure rate limits and usage thresholds
