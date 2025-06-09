@@ -16,7 +16,7 @@ exports.infoChecker = functions.https.onRequest(async (req, res) => {
   }
 
   try {
-    // Step 1: Fetch Google search results
+    // Fetch Google search results
     const searchRes = await axios.get(
       `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(req.body.claim)}&cx=${CSE_ID}&key=${SEARCH_API_KEY}`
     );
@@ -38,31 +38,32 @@ exports.infoChecker = functions.https.onRequest(async (req, res) => {
 
     const snippets = results.map((r, i) => `${i + 1}. ${r.snippet}`).join("\n");
 
-    // Step 2: Compose Gemini prompt
+    //Compose Gemini prompt
     const prompt = `
-You are a fact-checking assistant.
+      You are a fact-checking assistant.
 
-Given the claim: "${req.body.claim}"
+      Given the claim: "${req.body.claim}"
 
-And the following sources:
-${snippets}
+      And the following sources:
+      ${snippets}
 
-Your task is to evaluate the credibility of the claim based on the above sources. Determine whether the claim is **true**, **false**, or **unverifiable**.
+      Your task is to evaluate the credibility of the claim based on the above sources. Determine whether the claim is **true**, **false**, or **unverifiable**.
 
-Guidelines:
-- If the claim is **true**, state that clearly, explain *why* it is true based on the sources, and provide the supporting URLs.
-- If the claim is **false**, say so, explain *why* it is false based on the evidence, and provide the links that disprove it.
-- If the claim is **unverifiable**, state that it is unverifiable based on the given sources, and suggest that the user provide more details or clarify the claim for better results.
+      Guidelines:
+      - If the claim is **true**, state that clearly, explain *why* it is true based on the sources, and provide the supporting URLs.
+      - If the claim is **false**, say so, explain *why* it is false based on the evidence, and provide the links that disprove it.
+      - If the claim is **unverifiable**, state that it is unverifiable based on the given sources, and 
+        suggest that the user provide more details or clarify the claim for better results.
 
-Respond in plain text. Do not use JSON or any structured format.
+      Respond in plain text. Do not use JSON or any structured format.
 
-Make sure to include:
-- Verdict: true / false / unverifiable
-- Explanation
-- Sources (as plain URLs)
-`;
+      Make sure to include:
+      - Verdict: true / false / unverifiable
+      - Explanation
+      - Sources (as plain URLs)
+      `;
 
-    // Step 3: Call Gemini via Google AI Studio API
+    // Call Gemini via Google AI Studio API
     const geminiResponse = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
@@ -83,7 +84,7 @@ Make sure to include:
 
     const geminiReply = geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini.";
 
-    // Step 4: Return final output
+    // Return final output
     return res.status(200).json({
       claim: req.body.claim,
       result: geminiReply,
